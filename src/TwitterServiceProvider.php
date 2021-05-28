@@ -8,6 +8,6 @@ class TwitterServiceProvider extends ServiceProvider
 {
     public function boot()
     {
-
+        $this->app->bind('twitter', Twitter::class);
     }
 }
