@@ -61,10 +61,7 @@ class Twitter
             ->toArray();
 
         $authors = collect($tweets['includes']['users'] ?? [])
-            ->mapWithKeys(fn ($item) => [$item['id'] => [
-                'username' => $item['username'],
-                'name' => $item['name'],
-            ]])
+            ->mapWithKeys(fn ($item) => [$item['id'] => $item['username']])
             ->toArray();
 
         return collect($data)
