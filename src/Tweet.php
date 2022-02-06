@@ -25,6 +25,7 @@ class Tweet
     {
         return collect($this->media)
             ->filter(fn ($item) => ($item['type'] ?? '') === 'photo')
+            ->map(fn ($item) => $item['url'])
             ->toArray();
     }
 
@@ -36,6 +37,7 @@ class Tweet
     public function video()
     {
         return collect($this->media)
+            ->reject(fn ($item) => empty($item['type'] ?? ''))
             ->filter(fn ($item) => ($item['type'] ?? '') !== 'photo')
             ->map(function ($video) {
                 $id = Str::of($video['preview_image_url'])->afterLast('/')->beforeLast('.');
