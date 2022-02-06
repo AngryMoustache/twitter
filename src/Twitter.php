@@ -25,7 +25,7 @@ class Twitter
     public function likes($page = 1)
     {
         $this->options = [
-            'media.fields' => 'url',
+            'media.fields' => 'url,duration_ms,preview_image_url',
             'expansions' => 'attachments.media_keys,author_id',
             'tweet.fields' => 'entities',
             'user.fields' => 'username',
