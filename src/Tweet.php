@@ -9,8 +9,7 @@ class Tweet
     public $id;
     public $text;
     public $author;
-    public $attachments;
-    public $video;
+    public $media;
     public $source;
 
     public function __construct(array $tweet = [])
@@ -18,32 +17,31 @@ class Tweet
         $this->id = $tweet['id'] ?? null;
         $this->text = $tweet['text'] ?? null;
         $this->author = $tweet['author'] ?? null;
-        $this->attachments = $tweet['attachments'] ?? null;
-        $this->video = $tweet['video'] ?? null;
+        $this->media = $tweet['media'] ?? null;
         $this->source = $tweet['entities']['urls'][0]['url'] ?? null;
     }
 
-    public function getMainImage()
+    public function images()
     {
-        return $this->attachments[0]
-            ?? $this->getVideo()['preview_image']
-            ?? null;
+        return collect($this->media)
+            ->filter(fn ($item) => ($item['type'] ?? '') === 'photo')
+            ->toArray();
     }
 
-    public function getVideo()
+    public function image()
     {
-        $videoId = Str::of($this->video[0] ?? '')
-            ->afterLast('/tweet_video_thumb/')
-            ->beforeLast('.')
-            ->__toString();
+        return $this->images()[0] ?? null;
+    }
 
-        if (! $videoId) {
-            return null;
-        }
-
-        return [
-            'preview_image' => $this->video[0],
-            'video_url' => "https://video.twimg.com/tweet_video/${videoId}.mp4",
-        ];
+    public function video()
+    {
+        return collect($this->media)
+            ->filter(fn ($item) => ($item['type'] ?? '') !== 'photo')
+            ->map(function ($video) {
+                $id = Str::of($video['preview_image_url'])->afterLast('/')->beforeLast('.');
+                $video['video_url'] = "https://video.twimg.com/tweet_video/${id}.mp4";
+                return $video;
+            })
+            ->first();
     }
 }

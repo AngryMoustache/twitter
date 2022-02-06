@@ -2,6 +2,7 @@
 
 namespace AngryMoustache\Twitter;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class Twitter
@@ -25,12 +26,11 @@ class Twitter
     public function likes($page = 1)
     {
         $this->options = [
-            'media.fields' => 'url,duration_ms,preview_image_url',
+            'media.fields' => 'media_key,duration_ms,width,height,preview_image_url,type,url,alt_text',
             'expansions' => 'attachments.media_keys,author_id',
-            'tweet.fields' => 'entities',
+            'tweet.fields' => 'attachments,author_id,context_annotations,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,reply_settings,source,text,withheld',
             'user.fields' => 'username',
         ];
-
 
         for ($i = 0; $i < $page; $i++) {
             if ($this->options['pagination_token'] ?? null || $i === 0) {
@@ -56,14 +56,9 @@ class Twitter
     {
         $data = $tweets['data'] ?? [];
 
-        $images = collect($tweets['includes']['media'] ?? [])
-            ->mapWithKeys(fn ($item) => [$item['media_key'] => $item['url'] ?? null])
-            ->filter()
-            ->toArray();
-
-        $videos = collect($tweets['includes']['media'] ?? [])
-            ->mapWithKeys(fn ($item) => [$item['media_key'] => $item['preview_image_url'] ?? null])
-            ->filter()
+        $media = collect($tweets['includes']['media'] ?? [])
+            ->reject(fn ($item) => $item['type'] === 'video')
+            ->mapWithKeys(fn ($item) => [$item['media_key'] => $item])
             ->toArray();
 
         $authors = collect($tweets['includes']['users'] ?? [])
@@ -71,26 +66,16 @@ class Twitter
             ->toArray();
 
         return collect($data)
-            ->map(fn ($tweet) => $this->linkVideoToTweet($tweet, $videos))
-            ->map(fn ($tweet) => $this->linkMediaToTweet($tweet, $images))
+            ->map(fn ($tweet) => $this->linkMediaToTweet($tweet, $media))
             ->map(fn ($tweet) => $this->linkAuthorToTweet($tweet, $authors))
             ->mapInto(Tweet::class)
             ->toArray();
     }
 
-    private function linkVideoToTweet($tweet, $videos)
+    private function linkMediaToTweet($tweet, $media)
     {
-        $tweet['video'] = collect($tweet['attachments']['media_keys'] ?? [])
-            ->map(fn ($videoKey) => $videos[$videoKey] ?? null)
-            ->toArray();
-
-        return $tweet;
-    }
-
-    private function linkMediaToTweet($tweet, $images)
-    {
-        $tweet['attachments'] = collect($tweet['attachments']['media_keys'] ?? [])
-            ->map(fn ($imageKey) => $images[$imageKey] ?? null)
+        $tweet['media'] = collect($tweet['attachments']['media_keys'] ?? [])
+            ->map(fn ($mediaId) => $media[$mediaId] ?? null)
             ->toArray();
 
         return $tweet;
